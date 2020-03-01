@@ -2648,11 +2648,10 @@ void TextBase::draw(QPainter* p) const
                   t.draw(p, this);
             }
       else {
-            TextBase* wrapped = wrappedToWidth(parent()->bbox().width());
-            QList<TextBlock>& l = wrapped->textBlockList();
-            for (const TextBlock t : l)
-                  t.draw(p, wrapped);
-            delete wrapped;
+            WrappedText wrapped(*this, parent()->bbox().width());
+            QList<TextBlock>& l = wrapped.textBlockList();
+            for (const TextBlock& t : l)
+                  t.draw(p, &wrapped.text());
             }
       }
 

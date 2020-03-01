@@ -17,11 +17,13 @@
 
 namespace Ms {
 
+class WrappedText;
+
 //---------------------------------------------------------
 //   Text
 //---------------------------------------------------------
 
-class Text final : public TextBase {
+class Text final: public TextBase {
 
    public:
       Text(Score* s = 0, Tid tid = Tid::DEFAULT);
@@ -31,6 +33,19 @@ class Text final : public TextBase {
       virtual Text* clone() const override         { return new Text(*this); }
       virtual void read(XmlReader&) override;
       virtual QVariant propertyDefault(Pid id) const override;
+
+      friend class WrappedText;
+      };
+
+class WrappedText {
+      Text  _original;
+      Text  _text;
+      qreal _width;
+   public:
+      WrappedText(const TextBase&, qreal);
+      QList<TextBlock>& textBlockList() { return _text.textBlockList(); }
+      qreal width() { return _width; }
+      Text& text()  { return _text; }
       };
 
 }     // namespace Ms

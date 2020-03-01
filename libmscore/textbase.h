@@ -248,8 +248,6 @@ class TextBase : public Element {
       void insert(TextCursor*, uint code);
       void genText() const;
       virtual int getPropertyFlagsIdx(Pid id) const override;
-      void appendTextBlock(TextBlock tb = TextBlock()) { _layout.append(tb); }
-      void appendFragment(TextFragment tf = TextFragment()) { _layout.last().appendFragment(tf); }
       QString stripText(bool, bool, bool) const;
 
    protected:
@@ -276,6 +274,9 @@ class TextBase : public Element {
       void setXmlText(const QString&);
       QString xmlText() const;
       QString plainText() const;
+
+      void appendTextBlock(TextBlock tb = TextBlock()) { _layout.append(tb); }
+      void appendFragment(TextFragment tf = TextFragment()) { _layout.last().appendFragment(tf); }
 
       void insertText(EditData&, const QString&);
 

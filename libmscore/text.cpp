@@ -34,7 +34,9 @@ Text::Text(Score* s, Tid tid) : TextBase(s, tid)
       }
 
 
-Text::Text(const TextBase& tb) : TextBase(tb) {}
+Text::Text(const TextBase& tb) : TextBase(tb)
+      {
+      }
 
 //---------------------------------------------------------
 //   read
@@ -69,5 +71,54 @@ QVariant Text::propertyDefault(Pid id) const
                   return TextBase::propertyDefault(id);
             }
       }
+
+//---------------------------------------------------------
+//   WrappedText
+//---------------------------------------------------------
+
+WrappedText::WrappedText(const TextBase& tex, qreal w)
+   : _original(tex), _text(tex), _width(w)
+      {
+      _original.textBlockList() = const_cast<TextBase&>(tex).textBlockList();
+      _text.textBlockList().clear();
+      QFontMetricsF fm(_text.font());
+      qreal lineLen = 0;
+      for (const TextBlock& t : _original.textBlockList()) {
+            _text.appendTextBlock();
+            _text.textBlockList().last().setEol(true);
+            for (TextFragment frag : t.fragments()) {
+                   QFont fon = frag.font(&_text);
+                   fon.setPointSizeF(fon.pointSizeF() * MScore::pixelRatio);
+                   fm = QFontMetricsF(fon);
+                   lineLen += fm.horizontalAdvance(frag.text);
+                   if (lineLen <= w) {
+                         _text.appendFragment(frag);
+                         }
+                   else {
+                         TextFragment back;
+                         lineLen -= fm.horizontalAdvance(frag.text);
+                         int col = 0, idx = 0;
+                         for (const QChar& c : frag.text) {
+                               lineLen += fm.horizontalAdvance(c);
+                               if (lineLen > w) {
+                                     break;
+                                     }
+                               ++idx;
+                               if (c.isHighSurrogate())
+                                     continue;
+                               ++col;
+                               }
+                         back = frag.split(col);
+                         _text.appendFragment(frag);
+                         _text.appendTextBlock();
+                         _text.textBlockList().last().setEol(true);
+                         _text.appendFragment(back);
+                         lineLen = fm.horizontalAdvance(frag.text);
+                         }
+                   }
+            }
+            _text.layout();
+      }
 }
+
 
