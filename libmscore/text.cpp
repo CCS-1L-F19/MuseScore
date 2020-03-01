@@ -33,6 +33,9 @@ Text::Text(Score* s, Tid tid) : TextBase(s, tid)
       initElementStyle(&defaultStyle);
       }
 
+
+Text::Text(const TextBase& tb) : TextBase(tb) {}
+
 //---------------------------------------------------------
 //   read
 //---------------------------------------------------------

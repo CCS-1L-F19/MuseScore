@@ -32,13 +32,14 @@ class TBox : public VBox {
       TBox(const TBox&);
       ~TBox();
       virtual TBox* clone() const        { return new TBox(*this); }
-      virtual ElementType type() const   { return ElementType::TBOX;       }
+      virtual ElementType type() const   { return ElementType::TBOX; }
       virtual void write(XmlWriter&) const override;
       using VBox::write;
       virtual void read(XmlReader&) override;
       virtual Element* drop(EditData&) override;
       virtual void add(Element* e) override;
       virtual void remove(Element* el) override;
+      virtual bool doTextWrap()          { return true; }
 
       virtual void layout();
       virtual void scanElements(void* data, void (*func)(void*, Element*), bool all=true);

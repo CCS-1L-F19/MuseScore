@@ -25,6 +25,7 @@ class Text final : public TextBase {
 
    public:
       Text(Score* s = 0, Tid tid = Tid::DEFAULT);
+      Text(const TextBase&);
 
       virtual ElementType type() const override    { return ElementType::TEXT; }
       virtual Text* clone() const override         { return new Text(*this); }

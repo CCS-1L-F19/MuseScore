@@ -197,6 +197,7 @@ class TextBlock {
       QString remove(int start, int n);
       int column(qreal x, TextBase*) const;
       TextBlock split(int column);
+      void appendFragment(TextFragment tf = TextFragment()) { _fragments.append(tf); }
       qreal xpos(int col, const TextBase*) const;
       const CharFormat* formatAt(int) const;
       const TextFragment* fragment(int col) const;
@@ -247,6 +248,8 @@ class TextBase : public Element {
       void insert(TextCursor*, uint code);
       void genText() const;
       virtual int getPropertyFlagsIdx(Pid id) const override;
+      void appendTextBlock(TextBlock tb = TextBlock()) { _layout.append(tb); }
+      void appendFragment(TextFragment tf = TextFragment()) { _layout.last().appendFragment(tf); }
       QString stripText(bool, bool, bool) const;
 
    protected:
@@ -343,6 +346,8 @@ class TextBase : public Element {
 
       QFont font() const;
       QFontMetricsF fontMetrics() const;
+
+      TextBase* wrappedToWidth(qreal w) const;
 
       virtual QVariant getProperty(Pid propertyId) const override;
       virtual bool setProperty(Pid propertyId, const QVariant& v) override;

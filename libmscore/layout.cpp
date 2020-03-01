@@ -4400,10 +4400,10 @@ void Score::doLayoutRange(const Fraction& st, const Fraction& et)
       if (m == 0)
             m = first();
       // start layout one measure earlier to handle clefs and cautionary elements
-      if (m->prevMeasureMM())
-            m = m->prevMeasureMM();
-      else if (m->prev())
-            m = m->prev();
+      if (m->prevMeasureMM())         // can delete?
+            m = m->prevMeasureMM();   // can delete?
+      else if (m->prev())             // can delete?
+            m = m->prev();            // can delete?
       while (!m->isMeasure() && m->prev())
             m = m->prev();
 

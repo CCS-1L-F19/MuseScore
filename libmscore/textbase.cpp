@@ -2642,8 +2642,18 @@ void TextBase::draw(QPainter* p) const
             }
       p->setBrush(Qt::NoBrush);
       p->setPen(textColor());
-      for (const TextBlock& t : _layout)
-            t.draw(p, this);
+
+      if (!parent() || !parent()->doTextWrap()) {
+            for (const TextBlock& t : _layout)
+                  t.draw(p, this);
+            }
+      else {
+            TextBase* wrapped = wrappedToWidth(parent()->bbox().width());
+            QList<TextBlock>& l = wrapped->textBlockList();
+            for (const TextBlock t : l)
+                  t.draw(p, wrapped);
+            delete wrapped;
+            }
       }
 
 //---------------------------------------------------------
@@ -2718,6 +2728,54 @@ void TextBase::drawEditMode(QPainter* p, EditData& ed)
 
       p->drawRect(r);
       pen = QPen(MScore::defaultColor, 0.0);
+      }
+
+//---------------------------------------------------------
+//   wrappedToWidth
+//---------------------------------------------------------
+
+TextBase* TextBase::wrappedToWidth(qreal w) const {
+      TextBase *result = new Text(*this);
+      result->_layout.clear();
+      QFontMetricsF fm(font());
+      qreal lineLen = 0;
+      for (TextBlock t : _layout) {
+            result->appendTextBlock();
+            result->_layout.last().setEol(true);
+            for (TextFragment frag : t.fragments()) {
+                   QFont fon = frag.font(result);
+                   fon.setPointSizeF(fon.pointSizeF() * MScore::pixelRatio);
+                   fm = QFontMetricsF(fon);
+                   // PROBLEM IS LINELEN != BBOX OF `f`
+                   lineLen += fm.horizontalAdvance(frag.text);
+                   if (lineLen <= w) {
+                         result->appendFragment(frag);
+                         }
+                   else {
+                         TextFragment back;
+                         lineLen -= fm.horizontalAdvance(frag.text);
+                         int col = 0, idx = 0;
+                         for (const QChar& c : frag.text) {
+                               lineLen += fm.horizontalAdvance(c);
+                               if (lineLen > w) {
+                                     break;
+                                     }
+                               ++idx;
+                               if (c.isHighSurrogate())
+                                     continue;
+                               ++col;
+                               }
+                         back = frag.split(col);
+                         result->appendFragment(frag);
+                         result->appendTextBlock();
+                         result->_layout.last().setEol(true);
+                         result->appendFragment(back);
+                         lineLen = fm.horizontalAdvance(frag.text);
+                         }
+                   }
+            }
+            result->layout();
+            return result;
       }
 
 //---------------------------------------------------------
