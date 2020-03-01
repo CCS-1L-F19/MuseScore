@@ -2671,10 +2671,18 @@ void TextBase::drawEditMode(QPainter* p, EditData& ed)
             return;
             }
       TextCursor* _cursor = &ted->cursor;
+      TextBase* tb = this;
+
+      WrappedText wrapped = WrappedText(*this, parent()->bbox().width());
+      std::unique_ptr<TextCursor> tmp{new TextCursor(wrapped.translatedToWrapped(*_cursor))};
+      if (parent()->doTextWrap()) {
+            tb = &wrapped.text();
+            _cursor = tmp.get();
+            }
 
       if (_cursor->hasSelection()) {
             p->setBrush(Qt::NoBrush);
-            p->setPen(textColor());
+            p->setPen(tb->textColor());
             int r1 = _cursor->selectLine();
             int r2 = _cursor->row();
             int c1 = _cursor->selectColumn();
@@ -2689,16 +2697,16 @@ void TextBase::drawEditMode(QPainter* p, EditData& ed)
                         qSwap(c1, c2);
                   }
             int row = 0;
-            for (const TextBlock& t : _layout) {
-                  t.draw(p, this);
+            for (const TextBlock& t : tb->_layout) {
+                  t.draw(p, tb);
                   if (row >= r1 && row <= r2) {
                         QRectF br;
                         if (row == r1 && r1 == r2)
-                              br = t.boundingRect(c1, c2, this);
+                              br = t.boundingRect(c1, c2, tb);
                         else if (row == r1)
-                              br = t.boundingRect(c1, t.columns(), this);
+                              br = t.boundingRect(c1, t.columns(), tb);
                         else if (row == r2)
-                              br = t.boundingRect(0, c2, this);
+                              br = t.boundingRect(0, c2, tb);
                         else
                               br = t.boundingRect();
                         br.translate(0.0, t.y());
@@ -2721,7 +2729,7 @@ void TextBase::drawEditMode(QPainter* p, EditData& ed)
       p->setPen(QPen(QBrush(Qt::lightGray), 4.0 / matrix.m11()));  // 4 pixel pen size
       p->setBrush(Qt::NoBrush);
 
-      qreal m = spatium();
+      qreal m = tb->spatium();
       QRectF r = canvasBoundingRect().adjusted(-m, -m, m, m);
 //      qDebug("%f %f %f %f\n", r.x(), r.y(), r.width(), r.height());
 

@@ -41,10 +41,12 @@ class WrappedText {
       Text  _original;
       Text  _text;
       qreal _width;
+      std::pair<int, int> translatedToWrappedRowColPair(int r, int c);
    public:
       WrappedText(const TextBase&, qreal);
       QList<TextBlock>& textBlockList() { return _text.textBlockList(); }
-      qreal width() { return _width; }
+      qreal width() const { return _width; }
+      TextCursor translatedToWrapped(const TextCursor&);
       Text& text()  { return _text; }
       };
 

@@ -119,6 +119,52 @@ WrappedText::WrappedText(const TextBase& tex, qreal w)
             }
             _text.layout();
       }
+
+//---------------------------------------------------------
+//   translatedToWrappedRowColPair
+//---------------------------------------------------------
+
+std::pair<int, int> WrappedText::translatedToWrappedRowColPair(int r, int c) {
+      int wrappedRow = 0, tempCol = 0;
+      for (int tempOrigRow = 0; tempOrigRow < r; ++tempOrigRow) {
+            int origRowLen = _original.textBlock(tempOrigRow).columns();
+            int tempRowLen = 0;
+            for (; tempRowLen < origRowLen; ++wrappedRow)
+                  tempRowLen += _text.textBlock(wrappedRow).columns();
+            }
+      // Now _text.textBlock(wrappedRow)'s fragments will be a subset of _original.textBlock(r)'s fragments.
+
+      for (;tempCol <= c && wrappedRow != _text.textBlockList().length(); ++wrappedRow)
+            tempCol += _text.textBlock(wrappedRow).columns();
+
+      --wrappedRow;
+      tempCol -= _text.textBlock(wrappedRow).columns();
+
+      // Now wrappedRow will contain (r, c)'s match. tempCol will be the col that points to
+      // the start of wrappedRow in the original row.
+
+      return {wrappedRow, c-tempCol};
+
+
+      }
+
+//---------------------------------------------------------
+//   translatedToWrapped
+//---------------------------------------------------------
+
+TextCursor WrappedText::translatedToWrapped(const TextCursor& cur) {
+      TextCursor result = TextCursor(static_cast<TextBase*>(&_text));
+
+      auto pos = translatedToWrappedRowColPair(cur.row(), cur.column());
+      auto selectPos = translatedToWrappedRowColPair(cur.selectLine(), cur.selectColumn());
+
+      result.setRow(pos.first);
+      result.setColumn(pos.second);
+      result.setSelectLine(selectPos.first);
+      result.setSelectColumn(selectPos.second);
+
+      return result;
+      }
 }
 
 
