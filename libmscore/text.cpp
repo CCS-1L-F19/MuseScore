@@ -82,8 +82,10 @@ WrappedText::WrappedText(const TextBase& tex, qreal w)
       _original.textBlockList() = const_cast<TextBase&>(tex).textBlockList();
       _text.textBlockList().clear();
       QFontMetricsF fm(_text.font());
-      qreal lineLen = 0;
+      qreal lineLen;
+
       for (const TextBlock& t : _original.textBlockList()) {
+            lineLen = 0;
             _text.appendTextBlock();
             _text.textBlockList().last().setEol(true);
             for (TextFragment frag : t.fragments()) {
@@ -98,22 +100,24 @@ WrappedText::WrappedText(const TextBase& tex, qreal w)
                          TextFragment back;
                          lineLen -= fm.horizontalAdvance(frag.text);
                          int col = 0, idx = 0;
-                         for (const QChar& c : frag.text) {
+                         QString s = frag.text;
+                         for (const QChar& c : s) {
                                lineLen += fm.horizontalAdvance(c);
                                if (lineLen > w) {
-                                     break;
+                                     back = frag.split(col);
+                                     _text.appendFragment(frag);
+                                     _text.appendTextBlock();
+                                     _text.textBlockList().last().setEol(true);
+                                     lineLen = col = idx = 0;
+                                     frag = back;
                                      }
                                ++idx;
                                if (c.isHighSurrogate())
                                      continue;
                                ++col;
                                }
-                         back = frag.split(col);
-                         _text.appendFragment(frag);
-                         _text.appendTextBlock();
-                         _text.textBlockList().last().setEol(true);
-                         _text.appendFragment(back);
                          lineLen = fm.horizontalAdvance(frag.text);
+                         _text.appendFragment(frag);
                          }
                    }
             }

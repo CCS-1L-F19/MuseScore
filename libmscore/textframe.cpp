@@ -68,7 +68,7 @@ void TBox::layout()
             h = fm.ascent();
             }
       else
-            h = _text->height();
+            h = WrappedText(*_text, width()).text().height();
       qreal y = topMargin() * DPMM;
 #if 0
       if (_text->align() & Align::BOTTOM)

@@ -2730,7 +2730,7 @@ void TextBase::drawEditMode(QPainter* p, EditData& ed)
       p->setBrush(Qt::NoBrush);
 
       qreal m = tb->spatium();
-      QRectF r = canvasBoundingRect().adjusted(-m, -m, m, m);
+      QRectF r = tb->canvasBoundingRect().adjusted(-m, -m, m, m);
 //      qDebug("%f %f %f %f\n", r.x(), r.y(), r.width(), r.height());
 
       p->drawRect(r);
