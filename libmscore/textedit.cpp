@@ -195,9 +195,8 @@ bool TextBase::edit(EditData& ed)
       TextEditData* ted = static_cast<TextEditData*>(ed.getData(this));
       TextCursor* _cursor = &ted->cursor;
       WrappedText wrapped = WrappedText(*this, parent()->width());
-      std::unique_ptr<TextCursor> wrappedCursor{new TextCursor(wrapped.translatedToWrapped(*_cursor))};
-      if (parent()->doTextWrap())
-            _cursor = wrappedCursor.get();
+      std::unique_ptr<TextCursor> _wrappedCursor{new TextCursor(wrapped.translatedToWrapped(*_cursor))};
+      TextCursor* wrappedCursor = _wrappedCursor.get();
       // do nothing on Shift, it messes up IME on Windows. See #64046
       if (ed.key == Qt::Key_Shift)
             return false;

@@ -329,6 +329,10 @@ bool TextCursor::movePosition(QTextCursor::MoveOperation op, QTextCursor::MoveMo
       }
 
 
+// bool TextCursor::movePositionUsingWrappedText(WrappedText* wtc, QTextCursor::MoveOperation op, QTextCursor::MoveMode mode, int count) {
+//          wtc->movePosition(op, mode, count);
+//       }
+
 
 //---------------------------------------------------------
 //   doubleClickSelect

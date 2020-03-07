@@ -83,11 +83,15 @@ WrappedText::WrappedText(const TextBase& tex, qreal w)
       _text.textBlockList().clear();
       QFontMetricsF fm(_text.font());
       qreal lineLen;
+      int wrappedRow, origRow;
 
       for (const TextBlock& t : _original.textBlockList()) {
             lineLen = 0;
+            rowMap.insert({wrappedRow, origRow});
             _text.appendTextBlock();
             _text.textBlockList().last().setEol(true);
+            wrappedRow += 1;
+            origRow += 1;
             for (TextFragment frag : t.fragments()) {
                    QFont fon = frag.font(&_text);
                    fon.setPointSizeF(fon.pointSizeF() * MScore::pixelRatio);
@@ -105,9 +109,11 @@ WrappedText::WrappedText(const TextBase& tex, qreal w)
                                lineLen += fm.horizontalAdvance(c);
                                if (lineLen > w) {
                                      back = frag.split(col);
+                                     rowMap.insert({wrappedRow, origRow});
                                      _text.appendFragment(frag);
                                      _text.appendTextBlock();
                                      _text.textBlockList().last().setEol(true);
+                                     wrappedRow += 1;
                                      lineLen = col = idx = 0;
                                      frag = back;
                                      }
@@ -130,13 +136,14 @@ WrappedText::WrappedText(const TextBase& tex, qreal w)
 
 std::pair<int, int> WrappedText::translatedToWrappedRowColPair(int r, int c) {
       int wrappedRow = 0, tempCol = 0;
-      for (int tempOrigRow = 0; tempOrigRow < r; ++tempOrigRow) {
-            int origRowLen = _original.textBlock(tempOrigRow).columns();
+      for (int origRow = 0; origRow < r; ++origRow) {
+            int origRowLen = _original.textBlock(origRow).columns();
             int tempRowLen = 0;
             for (; tempRowLen < origRowLen; ++wrappedRow)
                   tempRowLen += _text.textBlock(wrappedRow).columns();
             }
-      // Now _text.textBlock(wrappedRow)'s fragments will be a subset of _original.textBlock(r)'s fragments.
+      // Now _text.textBlock(wrappedRow)'s fragments will be a subset of
+      // _original.textBlock(r)'s fragments.
 
       for (;tempCol <= c && wrappedRow != _text.textBlockList().length(); ++wrappedRow)
             tempCol += _text.textBlock(wrappedRow).columns();
@@ -148,8 +155,23 @@ std::pair<int, int> WrappedText::translatedToWrappedRowColPair(int r, int c) {
       // the start of wrappedRow in the original row.
 
       return {wrappedRow, c-tempCol};
+      }
 
+//---------------------------------------------------------
+//   translatedToOriginalRowColPair
+//---------------------------------------------------------
 
+std::pair<int, int> WrappedText::translatedToOriginalRowColPair(int r, int c) {
+      int origRow = 0;
+      int runningRowLen = 0;
+      for (int wrappedRow = 0; wrappedRow < r; ++wrappedRow) {
+            runningRowLen += _text.textBlock(wrappedRow).columns();
+            int origRowLen = _original.textBlock(origRow).columns();
+            Q_ASSERT(runningRowLen <= origRowLen);
+            if (runningRowLen == origRowLen)
+                  ++origRow;
+            }
+      return {0, 0};
       }
 
 //---------------------------------------------------------
@@ -169,6 +191,23 @@ TextCursor WrappedText::translatedToWrapped(const TextCursor& cur) {
 
       return result;
       }
+
+//---------------------------------------------------------
+//   translatedToOriginal
+//---------------------------------------------------------
+
+TextCursor WrappedText::translatedToOriginal(const TextCursor& cur) {
+      TextCursor result = TextCursor(static_cast<TextBase*>(&_original));
+
+      auto pos = translatedToOriginalRowColPair(cur.row(), cur.column());
+      auto selectPos = translatedToOriginalRowColPair(cur.selectLine(), cur.selectColumn());
+
+      result.setRow(pos.first);
+      result.setColumn(pos.second);
+      result.setSelectLine(selectPos.first);
+      result.setSelectColumn(selectPos.second);
+
+      return result;
+
+      }
 }
-
-
