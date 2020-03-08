@@ -10,6 +10,8 @@
 //  the file LICENCE.GPL
 //=============================================================================
 
+#include <algorithm>
+#include <vector>
 #include "text.h"
 #include "xml.h"
 #include "score.h"
@@ -83,15 +85,12 @@ WrappedText::WrappedText(const TextBase& tex, qreal w)
       _text.textBlockList().clear();
       QFontMetricsF fm(_text.font());
       qreal lineLen;
-      int wrappedRow, origRow;
+      int wrappedRow = 0, wrappedCol = 0, origRow = 0, origCol = 0;
 
       for (const TextBlock& t : _original.textBlockList()) {
-            lineLen = 0;
-            rowMap.insert({wrappedRow, origRow});
             _text.appendTextBlock();
             _text.textBlockList().last().setEol(true);
-            wrappedRow += 1;
-            origRow += 1;
+            lineLen = origCol = wrappedCol = 0;
             for (TextFragment frag : t.fragments()) {
                    QFont fon = frag.font(&_text);
                    fon.setPointSizeF(fon.pointSizeF() * MScore::pixelRatio);
@@ -99,22 +98,58 @@ WrappedText::WrappedText(const TextBase& tex, qreal w)
                    lineLen += fm.horizontalAdvance(frag.text);
                    if (lineLen <= w) {
                          _text.appendFragment(frag);
+                         for (int i = 0; i < frag.columns(); ++i) {
+                               posMap.push_back({origRow, origCol, wrappedRow, wrappedCol});
+                               ++wrappedCol;
+                               ++origCol;
+                               }
+
                          }
                    else {
                          TextFragment back;
                          lineLen -= fm.horizontalAdvance(frag.text);
-                         int col = 0, idx = 0;
+                         int col = 0, idx = 0, lastWordCol = 0, lastWordColCount = 0;
+                         qreal lastWordLen = 0;
+                         bool prevCharIsSpace = false;
                          QString s = frag.text;
                          for (const QChar& c : s) {
+                               if (c == ' ') {
+                                     prevCharIsSpace = true;
+                                     lastWordLen += fm.horizontalAdvance(c);
+                                     ++lastWordColCount;
+                                     }
+                               else if (prevCharIsSpace) {
+                                     lastWordCol = col;
+                                     lastWordLen = 0;
+                                     lastWordColCount = 0;
+                                     prevCharIsSpace = false;
+                                     }
+                               else {
+                                     if (c.isLowSurrogate())
+                                           ++lastWordColCount;
+                                     lastWordLen += fm.horizontalAdvance(c);
+                                     }
+
                                lineLen += fm.horizontalAdvance(c);
                                if (lineLen > w) {
-                                     back = frag.split(col);
-                                     rowMap.insert({wrappedRow, origRow});
+                                     back = frag.split(lastWordCol != 0 ? lastWordCol : col);
+                                     for (int i = 0; i < frag.columns(); ++i) {
+                                           posMap.push_back({origRow, origCol, wrappedRow, wrappedCol});
+                                           ++wrappedCol;
+                                           ++origCol;
+                                           }
+                                     posMap.push_back({origRow, origCol, wrappedRow, wrappedCol});
                                      _text.appendFragment(frag);
                                      _text.appendTextBlock();
                                      _text.textBlockList().last().setEol(true);
-                                     wrappedRow += 1;
-                                     lineLen = col = idx = 0;
+                                     ++wrappedRow;
+                                     col = idx = wrappedCol = 0;
+                                     lineLen = fm.horizontalAdvance(c);
+                                     if (lastWordCol != 0) {
+                                           col = idx = lastWordColCount;
+                                           lineLen += lastWordLen;
+                                           }
+                                     lastWordCol = lastWordColCount = lastWordLen = 0;
                                      frag = back;
                                      }
                                ++idx;
@@ -122,56 +157,22 @@ WrappedText::WrappedText(const TextBase& tex, qreal w)
                                      continue;
                                ++col;
                                }
+                         for (int i = 0; i < frag.columns(); ++i) {
+                               posMap.push_back({origRow, origCol, wrappedRow, wrappedCol});
+                               ++wrappedCol;
+                               ++origCol;
+                               }
+                         posMap.push_back({origRow, origCol, wrappedRow, wrappedCol});
                          lineLen = fm.horizontalAdvance(frag.text);
                          _text.appendFragment(frag);
                          }
+                   ++wrappedRow;
+                   ++origRow;
                    }
             }
+            posMap.push_back({origRow - 1, origCol, wrappedRow - 1, wrappedCol});
+            posMap.push_back({origRow, 0, wrappedRow, 0});
             _text.layout();
-      }
-
-//---------------------------------------------------------
-//   translatedToWrappedRowColPair
-//---------------------------------------------------------
-
-std::pair<int, int> WrappedText::translatedToWrappedRowColPair(int r, int c) {
-      int wrappedRow = 0, tempCol = 0;
-      for (int origRow = 0; origRow < r; ++origRow) {
-            int origRowLen = _original.textBlock(origRow).columns();
-            int tempRowLen = 0;
-            for (; tempRowLen < origRowLen; ++wrappedRow)
-                  tempRowLen += _text.textBlock(wrappedRow).columns();
-            }
-      // Now _text.textBlock(wrappedRow)'s fragments will be a subset of
-      // _original.textBlock(r)'s fragments.
-
-      for (;tempCol <= c && wrappedRow != _text.textBlockList().length(); ++wrappedRow)
-            tempCol += _text.textBlock(wrappedRow).columns();
-
-      --wrappedRow;
-      tempCol -= _text.textBlock(wrappedRow).columns();
-
-      // Now wrappedRow will contain (r, c)'s match. tempCol will be the col that points to
-      // the start of wrappedRow in the original row.
-
-      return {wrappedRow, c-tempCol};
-      }
-
-//---------------------------------------------------------
-//   translatedToOriginalRowColPair
-//---------------------------------------------------------
-
-std::pair<int, int> WrappedText::translatedToOriginalRowColPair(int r, int c) {
-      int origRow = 0;
-      int runningRowLen = 0;
-      for (int wrappedRow = 0; wrappedRow < r; ++wrappedRow) {
-            runningRowLen += _text.textBlock(wrappedRow).columns();
-            int origRowLen = _original.textBlock(origRow).columns();
-            Q_ASSERT(runningRowLen <= origRowLen);
-            if (runningRowLen == origRowLen)
-                  ++origRow;
-            }
-      return {0, 0};
       }
 
 //---------------------------------------------------------
@@ -181,13 +182,19 @@ std::pair<int, int> WrappedText::translatedToOriginalRowColPair(int r, int c) {
 TextCursor WrappedText::translatedToWrapped(const TextCursor& cur) {
       TextCursor result = TextCursor(static_cast<TextBase*>(&_text));
 
-      auto pos = translatedToWrappedRowColPair(cur.row(), cur.column());
-      auto selectPos = translatedToWrappedRowColPair(cur.selectLine(), cur.selectColumn());
+      auto posIt = std::find_if(posMap.begin(), posMap.end(), [cur](const PositionPair& p) {
+            return p.originalCol == cur.column() && p.originalRow == cur.row();
+      });
+      auto selectPosIt = std::find_if(posMap.begin(), posMap.end(), [cur](const PositionPair& p) {
+            return p.originalCol == cur.selectColumn() && p.originalRow == cur.selectLine();
+      });
 
-      result.setRow(pos.first);
-      result.setColumn(pos.second);
-      result.setSelectLine(selectPos.first);
-      result.setSelectColumn(selectPos.second);
+      Q_ASSERT(posIt != posMap.end() && selectPosIt != posMap.end());
+
+      result.setRow(posIt->wrappedRow);
+      result.setColumn(posIt->wrappedCol);
+      result.setSelectLine(selectPosIt->wrappedRow);
+      result.setSelectColumn(selectPosIt->wrappedCol);
 
       return result;
       }
@@ -199,13 +206,19 @@ TextCursor WrappedText::translatedToWrapped(const TextCursor& cur) {
 TextCursor WrappedText::translatedToOriginal(const TextCursor& cur) {
       TextCursor result = TextCursor(static_cast<TextBase*>(&_original));
 
-      auto pos = translatedToOriginalRowColPair(cur.row(), cur.column());
-      auto selectPos = translatedToOriginalRowColPair(cur.selectLine(), cur.selectColumn());
+      auto posIt = std::find_if(posMap.begin(), posMap.end(), [cur](const PositionPair& p) {
+            return p.wrappedCol == cur.column() && p.wrappedRow == cur.row();
+      });
+      auto selectPosIt = std::find_if(posMap.begin(), posMap.end(), [cur](const PositionPair& p) {
+            return p.wrappedCol == cur.selectColumn() && p.wrappedRow == cur.selectLine();
+      });
 
-      result.setRow(pos.first);
-      result.setColumn(pos.second);
-      result.setSelectLine(selectPos.first);
-      result.setSelectColumn(selectPos.second);
+      Q_ASSERT(posIt != posMap.end() && selectPosIt != posMap.end());
+
+      result.setRow(posIt->originalRow);
+      result.setColumn(posIt->originalCol);
+      result.setSelectLine(selectPosIt->originalRow);
+      result.setSelectColumn(selectPosIt->originalCol);
 
       return result;
 

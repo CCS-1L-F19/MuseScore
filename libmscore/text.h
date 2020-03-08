@@ -13,6 +13,7 @@
 #ifndef __TEXT_H__
 #define __TEXT_H__
 
+#include <vector>
 #include "textbase.h"
 
 namespace Ms {
@@ -42,10 +43,15 @@ class WrappedText {
       Text  _text;
       qreal _width;
 
-      std::set<std::pair<int /*originalRow*/, int/*wrappedRow*/>> rowMap{};
+      struct PositionPair {
+            int originalRow;
+            int originalCol;
+            int wrappedRow;
+            int wrappedCol;
+            };
 
-      std::pair<int, int> translatedToWrappedRowColPair(int r, int c);
-      std::pair<int, int> translatedToOriginalRowColPair(int r, int c);
+      std::vector<PositionPair> posMap{0};
+
    public:
       WrappedText(const TextBase&, qreal);
       QList<TextBlock>& textBlockList() { return _text.textBlockList(); }

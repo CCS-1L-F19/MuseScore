@@ -195,8 +195,8 @@ bool TextBase::edit(EditData& ed)
       TextEditData* ted = static_cast<TextEditData*>(ed.getData(this));
       TextCursor* _cursor = &ted->cursor;
       WrappedText wrapped = WrappedText(*this, parent()->width());
-      std::unique_ptr<TextCursor> _wrappedCursor{new TextCursor(wrapped.translatedToWrapped(*_cursor))};
-      TextCursor* wrappedCursor = _wrappedCursor.get();
+      std::unique_ptr<TextCursor> wrappedCursor{new TextCursor(wrapped.translatedToWrapped(*_cursor))};
+      TextCursor* _wrappedCursor = parent()->doTextWrap() ? wrappedCursor.get() : NULL;
       // do nothing on Shift, it messes up IME on Windows. See #64046
       if (ed.key == Qt::Key_Shift)
             return false;
@@ -292,20 +292,34 @@ bool TextBase::edit(EditData& ed)
 
                   case Qt::Key_Up:
 #if defined(Q_OS_MAC)
-                        if (!_cursor->movePosition(QTextCursor::Up, mm))
-                              _cursor->movePosition(QTextCursor::StartOfLine, mm);
+                        if (parent()->doTextWrap())
+                              if (!_cursor->movePositionUsingWrappedText(wrapped, QTextCursor::Up, mm))
+                                    _cursor->movePositionUsingWrappedText(wrapped, QTextCursor::StartOfLine, mm);
+                        else
+                              if (!_cursor->movePosition(QTextCursor::Up, mm))
+                                    _cursor->movePosition(QTextCursor::StartOfLine, mm);
 #else
-                        _cursor->movePosition(QTextCursor::Up, mm);
+                        if (parent()->doTextWrap())
+                              _cursor->movePositionUsingWrappedText(wrapped, QTextCursor::Up, mm);
+                        else
+                              _cursor->movePosition(QTextCursor::Up, mm);
 #endif
                         s.clear();
                         break;
 
                   case Qt::Key_Down:
 #if defined(Q_OS_MAC)
-                        if (!_cursor->movePosition(QTextCursor::Down, mm))
-                              _cursor->movePosition(QTextCursor::EndOfLine, mm);
+                        if (parent()->doTextWrap())
+                              if (!_cursor->movePositionUsingWrappedText(wrapped, QTextCursor::Down, mm))
+                                    _cursor->movePositionUsingWrappedText(wrapped, QTextCursor::EndOfLine, mm);
+                        else
+                              if (!_cursor->movePosition(QTextCursor::Down, mm))
+                                    _cursor->movePosition(QTextCursor::EndOfLine, mm);
 #else
-                        _cursor->movePosition(QTextCursor::Down, mm);
+                        if (parent()->doTextWrap())
+                              _cursor->movePositionUsingWrappedText(wrapped, QTextCursor::Down, mm);
+                        else
+                              _cursor->movePosition(QTextCursor::Down, mm);
 #endif
                         s.clear();
                         break;
@@ -314,7 +328,10 @@ bool TextBase::edit(EditData& ed)
                         if (ctrlPressed)
                               _cursor->movePosition(QTextCursor::Start, mm);
                         else
-                              _cursor->movePosition(QTextCursor::StartOfLine, mm);
+                              if (parent()->doTextWrap())
+                                    _cursor->movePositionUsingWrappedText(wrapped, QTextCursor::StartOfLine, mm);
+                              else
+                                    _cursor->movePosition(QTextCursor::StartOfLine, mm);
 
                         s.clear();
                         break;
@@ -323,7 +340,10 @@ bool TextBase::edit(EditData& ed)
                         if (ctrlPressed)
                               _cursor->movePosition(QTextCursor::End, mm);
                         else
-                              _cursor->movePosition(QTextCursor::EndOfLine, mm);
+                              if (parent()->doTextWrap())
+                                    _cursor->movePositionUsingWrappedText(wrapped, QTextCursor::EndOfLine, mm);
+                              else
+                                    _cursor->movePosition(QTextCursor::EndOfLine, mm);
 
                         s.clear();
                         break;

@@ -23,6 +23,7 @@ class MuseScoreView;
 struct SymCode;
 class TextBase;
 class TextBlock;
+class WrappedText;
 class ChangeText;
 
 //---------------------------------------------------------
@@ -132,7 +133,7 @@ class TextCursor {
       TextBlock& curLine() const;
       QRectF cursorRect() const;
       bool movePosition(QTextCursor::MoveOperation op, QTextCursor::MoveMode mode = QTextCursor::MoveAnchor, int count = 1);
-      bool movePositionUsingWrappedCursor(TextCursor* wtc, QTextCursor::MoveOperation op, QTextCursor::MoveMode mode = QTextCursor::MoveAnchor, int count = 1);
+      bool movePositionUsingWrappedText(WrappedText& wt, QTextCursor::MoveOperation op, QTextCursor::MoveMode mode = QTextCursor::MoveAnchor, int count = 1);
       void doubleClickSelect();
       void moveCursorToEnd()   { movePosition(QTextCursor::End);   }
       void moveCursorToStart() { movePosition(QTextCursor::Start); }

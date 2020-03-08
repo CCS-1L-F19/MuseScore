@@ -329,9 +329,16 @@ bool TextCursor::movePosition(QTextCursor::MoveOperation op, QTextCursor::MoveMo
       }
 
 
-// bool TextCursor::movePositionUsingWrappedText(WrappedText* wtc, QTextCursor::MoveOperation op, QTextCursor::MoveMode mode, int count) {
-//          wtc->movePosition(op, mode, count);
-//       }
+ bool TextCursor::movePositionUsingWrappedText(WrappedText& wt, QTextCursor::MoveOperation op, QTextCursor::MoveMode mode, int count) {
+       TextCursor wrappedCursor = wt.translatedToWrapped(*this);
+       bool result = wrappedCursor.movePosition(op, mode, count);
+       TextCursor originalCursor = wt.translatedToOriginal(wrappedCursor);
+       _row = originalCursor._row;
+       _column = originalCursor._column;
+       _selectLine = originalCursor._selectLine;
+       _selectColumn = originalCursor._selectColumn;
+       return result;
+       }
 
 
 //---------------------------------------------------------
